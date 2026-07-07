@@ -21,7 +21,7 @@ class _DescriptorBase:
             )
 
     def __get__(self, obj, objtype=None):
-        wrapper = self.Wrapper(obj)  # FIXME: wrapper may also be a value?!?
+        wrapper = self.Wrapper(obj)  # type: ignore
         if obj is None:
             # e.g. mocking with autospec=True in unittest.mock
             pass
@@ -54,6 +54,8 @@ class _DescriptorBase:
         return wrapper
 
 
+# TODO: Consider renaming this to _DummyLock (cf. "dummy_threading"), move to some import .py,
+# and also use this in other decorators (after doing some timing), to reduce multiple variants
 class _DefaultLock:
     def __enter__(_self):
         pass
@@ -65,12 +67,28 @@ class _DefaultLock:
 _default_lock = _DefaultLock()
 
 
-def _ttl_property(ttl, timer, lock):
-    pass
+def _ttl_property(method, ttl, timer, lock):
+    class Descriptor(_DescriptorBase):
+        class Wrapper:
+            def __init__(self, obj):
+                pass
+
+            def __call__(self, *args, **kwargs):
+                pass
+
+    return Descriptor()
 
 
-def _property(lock):
-    pass
+def _property(method, lock):
+    class Descriptor(_DescriptorBase):
+        class Wrapper:
+            def __init__(self, obj):
+                pass
+
+            def __call__(self, *args, **kwargs):
+                pass
+
+    return Descriptor()
 
 
 def _wrapper(method, ttl, timer, lock=_default_lock):
@@ -78,4 +96,6 @@ def _wrapper(method, ttl, timer, lock=_default_lock):
         wrapper = _ttl_property(method, ttl, timer, lock)
     else:
         wrapper = _property(method, lock)
-    return functools.update_wrapper(wrapper, method)
+    # functools.update_wrapper() will not accept descriptor (decorator) as wrapper
+    # https://github.com/python/typeshed/issues/9846
+    return functools.update_wrapper(wrapper, method)  # type: ignore
